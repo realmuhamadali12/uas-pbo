@@ -28,6 +28,8 @@ class ProductResource extends Resource
 
     protected static int $globalSearchResultsLimit = 3;
 
+    protected static ?string $navigationGroup = 'Shop';
+
     protected static array $statuses = [
         'in stock' => 'in stock',
         'sold out' => 'sold out',
@@ -38,29 +40,30 @@ class ProductResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Wizard::make([
-                    Forms\Components\Wizard\Step::make(__('Main data'))
-                        ->schema([
-                            Forms\Components\TextInput::make('name')
-                                ->label(__('Product name'))
-                                ->required()
-                                ->unique(ignoreRecord: true)
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('slug', str()->slug($state))),
-                            Forms\Components\TextInput::make('slug')
-                                ->disabledOn('edit')
-                                ->required(),
-                            Forms\Components\TextInput::make('price')
-                                ->required(),
-                        ]),
-                    Forms\Components\Wizard\Step::make(__('Additional data'))
-                        ->schema([
-                            Forms\Components\Radio::make('status')
-                                ->options(self::$statuses),
-                            Forms\Components\Select::make('category_id')
-                                ->relationship('category', 'name'),
-                        ]),
-                ])
+                Forms\Components\Select::make('category_id')
+                    ->relationship('category', 'name'),
+                Forms\Components\FileUpload::make('image')
+                    ->visibility('public')
+                    ->directory('images')
+                    ->name('image')
+                    ->image()
+                    ->imageEditor()
+                    ->openable(),
+                Forms\Components\TextInput::make('name')
+                    ->label(__('Product name'))
+                    ->required()
+                    ->unique(ignoreRecord: true)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (Forms\Set $set, ?string $state) => $set('slug', str()->slug($state))),
+                Forms\Components\TextInput::make('slug')
+                    ->disabledOn('edit')
+                    ->required(),
+                Forms\Components\TextInput::make('price')
+                    ->required()
+                    ->integer()
+                    ->prefix('Rp'),
+                Forms\Components\Toggle::make('is_active')
+                    ->label(__('Active')),
             ]);
     }
 
@@ -73,13 +76,12 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('price')
                     ->sortable()
                     ->money('idr')
-                    ->getStateUsing(function (Product $record): float {
-                        return $record->price / 100;
-                    })
                     ->alignRight(),
-                Tables\Columns\ToggleColumn::make('is_active'),
+                Tables\Columns\ToggleColumn::make('is_active')->label('Active'),
                 Tables\Columns\SelectColumn::make('status')
                     ->options(self::$statuses),
+                Tables\Columns\ImageColumn::make('image')
+                    ->label('Image'),
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Category name'),
                 Tables\Columns\TextColumn::make('tags.name')
